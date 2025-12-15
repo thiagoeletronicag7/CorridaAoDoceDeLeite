@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Contador de Pontos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .login, .admin {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      width: 350px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+
+    .admin {
+      display: none;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    .child {
+      margin-top: 20px;
+      border-top: 1px solid #ddd;
+      padding-top: 15px;
+    }
+
+    .points {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .controls button {
+      width: 60px;
+      font-size: 18px;
+    }
+
+    .blocked {
+      font-size: 18px;
+      color: #c62828;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+
+<!-- BLOQUEIO TOTAL -->
+<div id="blocked" class="blocked" style="display:none;">
+  ⛔ Acesso negado
+</div>
+
+<!-- LOGIN -->
+<div class="login" id="loginBox">
+  <h2>Área Administrativa</h2>
+  <input type="text" id="user" placeholder="Usuário" />
+  <input type="password" id="pass" placeholder="Senha" />
+  <button onclick="login()">Entrar</button>
+  <p id="error" style="color:red;"></p>
+</div>
+
+<!-- ADMIN -->
+<div class="admin" id="adminBox">
+  <h2>Controle de Pontos</h2>
+
+  <div class="child">
+    <div class="points">Lucas: <span id="p1">0</span></div>
+    <div class="controls">
+      <button onclick="changePoints('f1', -1)">-</button>
+      <button onclick="changePoints('f1', 1)">+</button>
+    </div>
+  </div>
+
+  <div class="child">
+    <div class="points">Caio: <span id="p2">0</span></div>
+    <div class="controls">
+      <button onclick="changePoints('f2', -1)">-</button>
+      <button onclick="changePoints('f2', 1)">+</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* =========================
+     TOKEN SECRETO (CAMADA 1)
+     ========================= */
+
+  const REQUIRED_TOKEN = 'DoceDeLeite@123BarcelonaViscaElBarça*()';
+
+  const urlToken =
+    new URLSearchParams(window.location.search).get('token');
+
+  if (urlToken !== REQUIRED_TOKEN) {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('adminBox').style.display = 'none';
+    document.getElementById('blocked').style.display = 'block';
+    throw new Error('Acesso negado');
+  }
+
+  /* =========================
+     LOGIN COM HASH (CAMADA 2)
+     ========================= */
+
+  const USER = 'admin';
+
+  // hash SHA-256 da senha "1234"
+  const PASS_HASH =
+    '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+
+  let points = {
+    f1: Number(localStorage.getItem('f1')) || 0,
+    f2: Number(localStorage.getItem('f2')) || 0
+  };
+
+  document.getElementById('p1').innerText = points.f1;
+  document.getElementById('p2').innerText = points.f2;
+
+  async function hash(text) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  async function login() {
+    const u = document.getElementById('user').value;
+    const p = document.getElementById('pass').value;
+
+    const hashed = await hash(p);
+
+    if (u === USER && hashed === PASS_HASH) {
+      sessionStorage.setItem('auth', 'ok');
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('adminBox').style.display = 'block';
+    } else {
+      document.getElementById('error').innerText =
+        'Usuário ou senha inválidos';
+    }
+  }
+
+  function changePoints(child, value) {
+    points[child] += value;
+    localStorage.setItem(child, points[child]);
+    document.getElementById(child === 'f1' ? 'p1' : 'p2').innerText =
+      points[child];
+  }
+
+  /* =========================
+     SESSÃO ATIVA NA ABA
+     ========================= */
+
+  if (sessionStorage.getItem('auth') === 'ok') {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('adminBox').style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
